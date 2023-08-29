@@ -21,4 +21,10 @@ Code for Tonkin Lab data
  - Display graph - show radial distribution on screen
  - Batch - Batch a directory instead of an individual file, will prompt for directory
  - Allow multiple rois
+#### Mode: 
+    - Classic - will do the above
+    - Annotate - Will open each image and allow annotation, will skip file if there's already an annotation
+    - Analyse - Will open each image that has an associated annotation and perform analysis
+#### Note for both analyse and annotate you need to specify the correct output path above which is where the annotations are stored. 
+    
    
