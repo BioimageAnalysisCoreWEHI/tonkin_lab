@@ -6,82 +6,160 @@
 #@ Boolean (label="Batch", value=false) batching 
 #@ Boolean (label="Allow multiple rois", value=false) allow_multiple
 #@ Boolean (label="Useless button - do not press", value=false) useless //debug mode*/
+#@ String (label="Mode", choices = {"Classic","Annotate","Analyse"}, style="listBox") what_are_we_doing
+
+
 
 var batch_dir = "";
 var fiji_dir = getDir("imagej");
 var plugin_dir = getDir("plugins");
 check_for_required_plugins();
 
-
-
 var dir2 = "" + ctonkin_outpath + File.separator();
 
 run("Close All");
 
-//Setup custom results table 
-Table_Heading = "Mean Radial Intensity Measures";
-if(!allow_multiple){
-	columns = "Filename,Mean Background,Mean Periphery Intensity,Mean Inner Region Intensity,Periphery Area,Inner Area,Max pixel, Distance of Max Pixel to edge";
-}else{
-	columns = "Filename,Mean Background,Mean Periphery Intensity,Mean Inner Region Intensity,Periphery Area,Inner Area,Max pixel, Distance of Max Pixel to edge,ROI Number";
+if ( what_are_we_doing == "Classic" ) { 
+	//Setup custom results table 
+	Table_Heading = "Mean Radial Intensity Measures";
+	if(!allow_multiple){
+		columns = "Filename,Mean Background,Mean Periphery Intensity,Mean Inner Region Intensity,Periphery Area,Inner Area,Max pixel, Distance of Max Pixel to edge";
+	}else{
+		columns = "Filename,Mean Background,Mean Periphery Intensity,Mean Inner Region Intensity,Periphery Area,Inner Area,Max pixel, Distance of Max Pixel to edge,ROI Number";
+	}
+	
+	columns = split(columns,",");
+	table = generateTable(Table_Heading,columns);
+	
+	if(batching){
+		batch_dir = getDirectory("Choose input directory full of .czis");
+		flist = getFileList(batch_dir);
+		for(i=0;i<flist.length;i++){
+			if(endsWith(flist[i],"czi")){
+				run("Close All");
+				fpath = batch_dir+flist[i];
+				if(!allow_multiple){
+					res = process_file(fpath);
+					fname = File.getName(fpath);
+					res = Array.concat(fname,res);
+					logResults(table,res);	
+					saveTable(Table_Heading);
+				}else{
+					fname = open_and_project(file_path);
+					prompt_user_to_draw_roi();
+					nRois = roiManager("Count");
+					if(nRois>1){
+						roiPath = ctonkin_outpath + File.separator() + "tmp.zip";
+					}else{
+						roiPath = ctonkin_outpath + File.separator() + "tmp.roi";
+					}
+					roiManager("Save",roiPath);
+					process_multiple_rois(fpath,table,roiPath,fname);				
+				}
+			}
+		}
+	}else{
+		fpath = ctonkin_fpath;
+		if(!allow_multiple){
+			res = process_file(fpath);
+			fname = File.getName(fpath);
+			res = Array.concat(fname,res);
+			logResults(table,res);
+			saveTable(Table_Heading);
+		}else{
+			process_multiple_rois(fpath,table);
+			
+		}		
+	}
 }
-columns = split(columns,",");
-table = generateTable(Table_Heading,columns);
 
-if(batching){
-	batch_dir = getDirectory("Choose input directory full of .czis");
-	flist = getFileList(batch_dir);
-	for(i=0;i<flist.length;i++){
-		if(endsWith(flist[i],"czi")){
-			run("Close All");
-			fpath = batch_dir+flist[i];
-			if(!allow_multiple){
-				res = process_file(fpath);
-				fname = File.getName(fpath);
-				res = Array.concat(fname,res);
-				logResults(table,res);	
-				saveTable(Table_Heading);
-			}else{
-				process_multiple_rois(fpath,table);				
+if (what_are_we_doing == "Annotate") {
+	print("Doing annotation");
+	if(batching){
+		batch_dir = getDirectory("Choose input directory full of .czis");
+		flist = getFileList(batch_dir);
+		for(i=0;i<flist.length;i++){
+			if(endsWith(flist[i],"czi")){
+				shortfname = File.getNameWithoutExtension(flist[i]);
+				if( !File.exists(ctonkin_outpath + File.separator() + shortfname + "rois.zip") && 
+				!File.exists(ctonkin_outpath + File.separator() + shortfname + "rois.roi") ){					
+					run("Close All");
+					file_path = batch_dir+flist[i];
+					define_ROIS_for_later(file_path);
+				}else{
+					print("Already has ROI");
+				}	
+			}
+		}
+	}	
+}
+
+if (what_are_we_doing == "Analyse") {
+	Table_Heading = "Mean Radial Intensity Measures";
+	if(!allow_multiple){
+		columns = "Filename,Mean Background,Mean Periphery Intensity,Mean Inner Region Intensity,Periphery Area,Inner Area,Max pixel, Distance of Max Pixel to edge";
+	}else{
+		columns = "Filename,Mean Background,Mean Periphery Intensity,Mean Inner Region Intensity,Periphery Area,Inner Area,Max pixel, Distance of Max Pixel to edge,ROI Number";
+	}
+	
+	columns = split(columns,",");
+	table = generateTable(Table_Heading,columns);
+	print("Doing analysis with saved ROIs");
+	if(batching){
+		batch_dir = getDirectory("Choose input directory full of .czis");
+		flist = getFileList(batch_dir);
+		for(i=0;i<flist.length;i++){
+			if(endsWith(flist[i],"czi")){
+				shortfname = File.getNameWithoutExtension(flist[i]);
+				if( !File.exists(ctonkin_outpath + File.separator() + shortfname + "rois.zip") && 
+				!File.exists(ctonkin_outpath + File.separator() + shortfname + "rois.roi") ){					
+					print("Aint no ROI file")
+				}else{
+					if( File.exists(ctonkin_outpath + File.separator() + shortfname + "rois.zip")){
+						roiPath = ctonkin_outpath + File.separator() + shortfname + "rois.zip";
+					}
+					if( File.exists(ctonkin_outpath + File.separator() + shortfname + "rois.roi")){
+						roiPath = ctonkin_outpath + File.separator() + shortfname + "rois.roi";
+					}
+					file_path = batch_dir+flist[i];
+					fname = open_and_project(file_path);
+					process_multiple_rois(file_path,table,roiPath,fname);							
+				}			
 			}
 		}
 	}
-}else{
-	fpath = ctonkin_fpath;
-	if(!allow_multiple){
-		res = process_file(fpath);
-		fname = File.getName(fpath);
-		res = Array.concat(fname,res);
-		logResults(table,res);
-		saveTable(Table_Heading);
-	}else{
-		process_multiple_rois(fpath,table);
-		
-	}		
 }
 
-
-function process_multiple_rois(file_path,table){
-	
+function define_ROIS_for_later(file_path){	
 	fname = open_and_project(file_path);
 	prompt_user_to_draw_roi();
 	nRois = roiManager("Count");
+	shortfname = File.getNameWithoutExtension(file_path);
+	print(shortfname);
 	if(nRois>1){
-		roiManager("Save",ctonkin_outpath + File.separator() + "tmp.zip");
+		roiManager("Save",ctonkin_outpath + File.separator() + shortfname + "rois.zip");
 	}else{
-		roiManager("Save",ctonkin_outpath + File.separator() + "tmp.roi");
+		roiManager("Save",ctonkin_outpath + File.separator() + shortfname + "rois.roi");
 	}
 	closeRoiManager();
+}
+
+
+
+function process_multiple_rois(file_path,table,roiPath,fname){
+	roiManager("Open",roiPath);
+	nRois = roiManager("Count");
 	for(roi=0;roi<nRois;roi++){
+		if(!isOpen("ROI Manager")){
+			roiManager("Open",roiPath);
+		}
+		
+		
 		if(!isOpen(fname)){
 			fname = open_and_project(file_path);
 		}
 		
-		if(nRois>1){
-			roiManager("Open",ctonkin_outpath + File.separator() + "tmp.zip");
-		}else{
-			roiManager("Open",ctonkin_outpath + File.separator() + "tmp.roi");
-		}
+		
 		roiManager("Select",roi);
 		
 		mask = filter_and_get_boundary("MAX_"+fname);
