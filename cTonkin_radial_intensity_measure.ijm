@@ -6,6 +6,8 @@
 #@ Boolean (label="Batch", value=false) batching 
 #@ Boolean (label="Allow multiple rois", value=false) allow_multiple
 #@ Boolean (label="Useless button - do not press", value=false) useless //debug mode*/
+#@ Integer (label="Parasite Masking Channel", min=1,max=5, value=1, style="Slider") masking_channel
+#@ Integer (label="Measurement Channel", min=1,max=5, value=1, style="Slider") measure_channel
 #@ String (label="Mode", choices = {"Classic","Annotate","Analyse"}, style="listBox") what_are_we_doing
 
 
@@ -113,7 +115,7 @@ if (what_are_we_doing == "Analyse") {
 				shortfname = File.getNameWithoutExtension(flist[i]);
 				if( !File.exists(ctonkin_outpath + File.separator() + shortfname + "rois.zip") && 
 				!File.exists(ctonkin_outpath + File.separator() + shortfname + "rois.roi") ){					
-					print("Aint no ROI file")
+					print("Aint no ROI file");
 				}else{
 					if( File.exists(ctonkin_outpath + File.separator() + shortfname + "rois.zip")){
 						roiPath = ctonkin_outpath + File.separator() + shortfname + "rois.zip";
@@ -223,7 +225,7 @@ function prompt_user_to_draw_roi(){
 function filter_and_get_boundary(mip_window_name){
 	selectWindow(mip_window_name);
 	run("Duplicate...", "duplicate title=roi");
-	run("Duplicate...", "duplicate title=mask channels=2");
+	run("Duplicate...", "duplicate title=mask channels="+masking_channel);
 	if(selectionType()!=-1){
 		run("Clear Outside");
 	}
