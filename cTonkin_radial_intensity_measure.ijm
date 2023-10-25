@@ -243,7 +243,7 @@ function get_radial_distribution(fname){
 	shortfname = File.getNameWithoutExtension(fname);
 	run("3D Distance Map", "map=Both image="+mask+" mask=Same threshold=0");
 	selectWindow("roi");
-	run("Duplicate...", "duplicate title=signal channels=1");
+	run("Duplicate...", "duplicate title=signal channels="+measure_channel);
 	run("3D EVF Layers", "step=0.020 evf=EVF signal=signal values=[Average Intensity] save");
 	r=0;
 	while(File.exists(ctonkin_outpath + File.separator() + shortfname+"_region_"+r+"_radialDistribution.csv")){
@@ -303,7 +303,7 @@ function get_intensity_measures_and_brightest_pixel(){
 		print("signal open");
 	}else{
 		selectWindow("MAX_"+fname);
-		run("Duplicate...","duplicate title=signal channels=1");
+		run("Duplicate...","duplicate title=signal channels="+measure_channel);
 	}
 	run("Intensity Measurements 2D/3D", "input=signal labels=lbl mean stddev max min median mode skewness kurtosis numberofvoxels volume neighborsmean neighborsstddev neighborsmax neighborsmin neighborsmedian neighborsmode neighborsskewness neighborskurtosis");
 	
@@ -357,7 +357,7 @@ function make_mask(fname){
 	
 	selectWindow("roi");
 	run("Select None");
-	run("Duplicate...", "duplicate title=signal-1 channels=1");
+	run("Duplicate...", "duplicate title=signal-1 channels="+measure_channel);
 	run("RGB Color");
 	run("Concatenate...", "open image1=thisone image2=signal-1 image3=[-- None --]");
 	run("Make Montage...", "columns=2 rows=1 scale=1");
