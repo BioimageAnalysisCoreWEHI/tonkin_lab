@@ -47,7 +47,7 @@ if ( what_are_we_doing == "Classic" ) {
 					logResults(table,res);	
 					saveTable(Table_Heading);
 				}else{
-					fname = open_and_project(file_path);
+					fname = open_and_project(fpath);
 					prompt_user_to_draw_roi();
 					nRois = roiManager("Count");
 					if(nRois>1){
