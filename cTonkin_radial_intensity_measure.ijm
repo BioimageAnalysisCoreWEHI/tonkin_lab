@@ -149,6 +149,7 @@ function define_ROIS_for_later(file_path){
 
 
 function process_multiple_rois(file_path,table,roiPath,fname){
+	closeRoiManager();
 	roiManager("Open",roiPath);
 	nRois = roiManager("Count");
 	for(roi=0;roi<nRois;roi++){
@@ -156,11 +157,9 @@ function process_multiple_rois(file_path,table,roiPath,fname){
 			roiManager("Open",roiPath);
 		}
 		
-		
 		if(!isOpen(fname)){
 			fname = open_and_project(file_path);
 		}
-		
 		
 		roiManager("Select",roi);
 		
