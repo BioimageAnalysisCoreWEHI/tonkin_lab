@@ -1,6 +1,7 @@
 #@ File (label="<HTML><h3>Choose a czi</h3>(Will be ignored if choosing batching)", style="File") ctonkin_fpath
 #@ File (label="<HTML><h3>Choose an output path", style="Directory") ctonkin_outpath
 #@ Float   (label="Width of \"edge\" (um)", style="slider", min=0.0, max=5.0, value=0.5, stepSize=0.1) edgeWidth
+#@ Integer (label="Expand boundary from parasites (in pixels)", min=0, max=10, value=1, style="Slider") morphological_dilate
 #@ Boolean (label="Get Radial Distribution", value=true) get_radial
 #@ Boolean (label="Display graph (if unchecked will just still save csv)", value=true) display_graph 
 #@ Boolean (label="Batch", value=false) batching 
@@ -15,9 +16,13 @@
 var batch_dir = "";
 var fiji_dir = getDir("imagej");
 var plugin_dir = getDir("plugins");
-check_for_required_plugins();
+//check_for_required_plugins();
 
 var dir2 = "" + ctonkin_outpath + File.separator();
+
+var expand_by = 0;
+
+expand_by = morphological_dilate
 
 run("Close All");
 
@@ -25,9 +30,9 @@ if ( what_are_we_doing == "Classic" ) {
 	//Setup custom results table 
 	Table_Heading = "Mean Radial Intensity Measures";
 	if(!allow_multiple){
-		columns = "Filename,Mean Background,Mean Periphery Intensity,Mean Inner Region Intensity,Periphery Area,Inner Area,Max pixel, Distance of Max Pixel to edge";
+		columns = "Filename,Mean Background,Mean Periphery Intensity,Mean Inner Region Intensity,Periphery Area,Inner Area,Max pixel, Distance of Max Pixel to edge, insideCTF, peripharyCTF";
 	}else{
-		columns = "Filename,Mean Background,Mean Periphery Intensity,Mean Inner Region Intensity,Periphery Area,Inner Area,Max pixel, Distance of Max Pixel to edge,ROI Number";
+		columns = "Filename,Mean Background,Mean Periphery Intensity,Mean Inner Region Intensity,Periphery Area,Inner Area,Max pixel, Distance of Max Pixel to edge, insideCTF, peripharyCTF, ROI Number";
 	}
 	
 	columns = split(columns,",");
@@ -99,9 +104,9 @@ if (what_are_we_doing == "Annotate") {
 if (what_are_we_doing == "Analyse") {
 	Table_Heading = "Mean Radial Intensity Measures";
 	if(!allow_multiple){
-		columns = "Filename,Mean Background,Mean Periphery Intensity,Mean Inner Region Intensity,Periphery Area,Inner Area,Max pixel, Distance of Max Pixel to edge";
+		columns = "Filename,Mean Background,Mean Periphery Intensity,Mean Inner Region Intensity,Periphery Area,Inner Area,Max pixel, Distance of Max Pixel to edge, inside_CTF, periphary_CTF";
 	}else{
-		columns = "Filename,Mean Background,Mean Periphery Intensity,Mean Inner Region Intensity,Periphery Area,Inner Area,Max pixel, Distance of Max Pixel to edge,ROI Number";
+		columns = "Filename,Mean Background,Mean Periphery Intensity,Mean Inner Region Intensity,Periphery Area,Inner Area,Max pixel, Distance of Max Pixel to edge,inside_CTF, periphary_CTF,ROI Number";
 	}
 	
 	columns = split(columns,",");
@@ -233,8 +238,9 @@ function filter_and_get_boundary(mip_window_name){
 	setOption("BlackBackground", true);
 	run("Convert to Mask");
 	run("Morphological Filters", "operation=Closing element=Disk radius=50");
-	run("Morphological Filters", "operation=Dilation element=Disk radius=5");
+	run("Morphological Filters", "operation=Dilation element=Disk radius="+expand_by);
 	mask=getTitle();
+	
 	return mask;
 }
 
@@ -306,12 +312,15 @@ function get_intensity_measures_and_brightest_pixel(){
 	}
 	run("Intensity Measurements 2D/3D", "input=signal labels=lbl mean stddev max min median mode skewness kurtosis numberofvoxels volume neighborsmean neighborsstddev neighborsmax neighborsmin neighborsmedian neighborsmode neighborsskewness neighborskurtosis");
 	
+	
+	
 	bgMean = Table.get("Mean",0);
 	outsideMean = Table.get("Mean",1);
 	insideMean = Table.get("Mean",2);
 	
 	outsideArea = Table.get("Volume",1);
 	insideArea = Table.get("Volume",2);
+	bgArea = Table.get("Volume",0);
 		
 	maxIntArray = newArray(Table.get("Max",1),Table.get("Max",2));
 	Array.getStatistics(maxIntArray, min, maxI, mean, stdDev);
@@ -331,7 +340,12 @@ function get_intensity_measures_and_brightest_pixel(){
 	setThreshold(1,2);
 	run("Analyze Particles...", "pixel display clear add");
 	
-	res = newArray(bgMean,outsideMean,insideMean,outsideArea,insideArea,maxI,distanceFromEdge);
+	// corrected total Fluorecence
+	//                  This is intDen     -   
+	inside_CTF = (insideMean * insideArea) - (insideArea / bgMean);
+	outside_CTF = (outsideMean * outsideArea) - (outsideArea / bgMean);
+	
+	res = newArray(bgMean,outsideMean,insideMean,outsideArea,insideArea,maxI,distanceFromEdge,inside_CTF, outside_CTF);
 	return res;
 }	
 							
@@ -346,7 +360,12 @@ function make_mask(fname){
 	run("Convert to Mask");
 	
 	selectWindow("roi");
+	getDimensions(width, height, channels, slices, frames);
+	for(c=1;c<=channels;c++){
+		Stack.setChannel(c);resetMinAndMax();
+	}
 	run("Add Image...", "image=lbl x=0 y=0 opacity=50 zero");
+	
 	run("RGB Color");
 	run("Flatten");
 	roiManager("Show All without labels");
@@ -355,11 +374,18 @@ function make_mask(fname){
 	
 	
 	selectWindow("roi");
-	run("Select None");
+	
+	getDimensions(width, height, channels, slices, frames);
+	for(c=1;c<=channels;c++){
+		Stack.setChannel(c);resetMinAndMax();
+	}
+	run("Select None");print(measure_channel);
 	run("Duplicate...", "duplicate title=signal-1 channels="+measure_channel);
+	
 	run("RGB Color");
 	run("Concatenate...", "open image1=thisone image2=signal-1 image3=[-- None --]");
 	run("Make Montage...", "columns=2 rows=1 scale=1");
+	
 	
 //save mask
 	r=0;
