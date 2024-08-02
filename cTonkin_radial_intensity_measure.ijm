@@ -6,7 +6,8 @@
 #@ Boolean (label="Display graph (if unchecked will just still save csv)", value=true) display_graph 
 #@ Boolean (label="Batch", value=false) batching 
 #@ Boolean (label="Allow multiple rois", value=false) allow_multiple
-#@ Boolean (label="Useless button - do not press", value=false) useless //debug mode*/
+#@ Boolean (label="Print results on mask image", value=false) print_on_mask //debug mode*/
+//#@ Boolean (label="Useless button - do not press", value=false) useless //debug mode*/
 #@ Integer (label="Parasite Masking Channel", min=1,max=5, value=1, style="Slider") masking_channel
 #@ Integer (label="Measurement Channel", min=1,max=5, value=1, style="Slider") measure_channel
 #@ String (label="Mode", choices = {"Classic","Annotate","Analyse"}, style="listBox") what_are_we_doing
@@ -21,8 +22,12 @@ var plugin_dir = getDir("plugins");
 var dir2 = "" + ctonkin_outpath + File.separator();
 
 var expand_by = 0;
-
 expand_by = morphological_dilate
+useless = false;
+
+var print_text_on_mask = 0;
+print_text_on_mask = print_on_mask;
+
 
 run("Close All");
 
@@ -176,7 +181,7 @@ function process_multiple_rois(file_path,table,roiPath,fname){
 		res = get_intensity_measures_and_brightest_pixel();
 		res = Array.concat(fname,res);
 		res = Array.concat(res,roi);
-		make_mask(fname);
+		make_mask(fname, res);
 		cleanup(fname);
 		run("Z Project...", "projection=[Max Intensity]");
 		
@@ -196,7 +201,7 @@ function process_file(file_path){
 	}
 	get_region_mask();
 	res = get_intensity_measures_and_brightest_pixel();
-	make_mask(fname);
+	make_mask(fname,res);
 	cleanup(fname);
 
 	return res;	
@@ -349,7 +354,7 @@ function get_intensity_measures_and_brightest_pixel(){
 	return res;
 }	
 							
-function make_mask(fname){
+function make_mask(fname,res){
 	shortfname = File.getName(fname);
 	selectWindow("roi");
 	roiManager("Select", 0);
@@ -384,7 +389,16 @@ function make_mask(fname){
 	
 	run("RGB Color");
 	run("Concatenate...", "open image1=thisone image2=signal-1 image3=[-- None --]");
+	
 	run("Make Montage...", "columns=2 rows=1 scale=1");
+	
+	if(print_text_on_mask){
+		getDimensions(width, height, channels, slices, frames);
+		run("Canvas Size...", "width="+width+" height="+height+100+" position=Top-Center zero");
+		setForegroundColor(255,255,255);
+		Overlay.drawString("Inner_CTF: "+res[9]+"\nPeriphery_CTF: "+res[8]+"\nMean Inner I: "+res[3]+"\nMean Periphery I: "+res[2]+"\nMean Background I: "+res[1],0+20,height+20);
+		Overlay.show
+	}
 	
 	
 //save mask
@@ -392,6 +406,9 @@ function make_mask(fname){
 	while(File.exists(ctonkin_outpath + File.separator() + shortfname+"_region_"+r+"_mask.jpg")){
 		r = r + 1;
 	}	
+	
+	
+	
 	saveAs("JPG",ctonkin_outpath + File.separator() + shortfname+"_region_"+r+"_mask.jpg");	
 }
 

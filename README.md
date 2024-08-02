@@ -17,10 +17,14 @@ Code for Tonkin Lab data
  - Input file (ignored if batch is selected)
  - Output path - where to put results
  - Width of "edge" - how many micron to step output edge in from edge of detected region
+ - Expand boundary from paraistes - Segmentation is done by thresholding parasite channel, edge of the vacuole is defined by expanding this area 
  - Get radial distribution - measure (and save) actual intensity distribution normalised from edge to centre
  - Display graph - show radial distribution on screen
  - Batch - Batch a directory instead of an individual file, will prompt for directory
  - Allow multiple rois
+ - Print results on mask image - Prints the results on the mask image
+ - Parasite Masking Channel - Parasite channel for segmentation
+ - Measurement Channel - channel to be measured
 #### Mode: 
     - Classic - will do the above
     - Annotate - Will open each image and allow annotation, will skip file if there's already an annotation
