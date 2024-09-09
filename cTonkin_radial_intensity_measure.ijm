@@ -123,20 +123,18 @@ if (what_are_we_doing == "Analyse") {
 		for(i=0;i<flist.length;i++){
 			if(endsWith(flist[i],"czi")){
 				shortfname = File.getNameWithoutExtension(flist[i]);
-				if( !File.exists(ctonkin_outpath + File.separator() + shortfname + "rois.zip") && 
-				!File.exists(ctonkin_outpath + File.separator() + shortfname + "rois.roi") ){					
-					print("Aint no ROI file");
+				roiFile = findRois(shortfname, ctonkin_outpath + File.separator());
+				roiPath = ctonkin_outpath + File.separator() + roiFile;
+						
+				if(roiFile == false){
+					print(shortfname  +" HAS NO ROIS");
+					print("Aint no ROI File");
 				}else{
-					if( File.exists(ctonkin_outpath + File.separator() + shortfname + "rois.zip")){
-						roiPath = ctonkin_outpath + File.separator() + shortfname + "rois.zip";
-					}
-					if( File.exists(ctonkin_outpath + File.separator() + shortfname + "rois.roi")){
-						roiPath = ctonkin_outpath + File.separator() + shortfname + "rois.roi";
-					}
-					file_path = batch_dir+flist[i];
-					fname = open_and_project(file_path);
-					process_multiple_rois(file_path,table,roiPath,fname);							
-				}			
+								
+				file_path = batch_dir+flist[i];
+				fname = open_and_project(file_path);
+				process_multiple_rois(file_path,table,roiPath,fname);							
+							
 			}
 		}
 	}
@@ -208,7 +206,7 @@ function process_file(file_path){
 }
 
 function open_and_project(file_path){
-	run("Bio-Formats Importer", "open=["+file_path+"] color_mode=Composite rois_import=[ROI manager] view=Hyperstack stack_order=XYCZT");
+	run("Bio-Formats Importer", "open=["+file_path+"] color_mode=Composite rois_import=[ROI manager] view=Hyperstack stack_order=XYCZT stitch_tiles");
 	fname = getTitle();
 	run("Z Project...", "projection=[Max Intensity]");
 	return fname;
@@ -501,4 +499,30 @@ function closeRoiManager(){
 		selectWindow("ROI Manager");
 		run("Close");
 	}
+}
+
+
+function findRois(shortName, roidir){
+	found = false;
+	flist = getFileList(roidir);
+	for(i=0;i<flist.length;i++){
+		if(startsWith(flist[i],shortName) && endsWith(flist[i],"zip")){
+			found = true;
+			print("Found ROI File");
+			roiFile = flist[i];			
+		}
+	}	
+	if(found){
+		return roiFile;
+	}else{
+		return false;
+	}
+}
+	
+	
+	
+	
+	
+	
+	
 }
