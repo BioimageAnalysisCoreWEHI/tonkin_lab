@@ -233,6 +233,7 @@ function filter_and_get_boundary(mip_window_name){
 	selectWindow(mip_window_name);
 	run("Duplicate...", "duplicate title=roi");
 	run("Duplicate...", "duplicate title=mask channels="+masking_channel);
+	resetMinAndMax();wait(50);
 	if(selectionType()!=-1){
 		run("Clear Outside");
 	}
